@@ -51,7 +51,7 @@ func (g *GitHubHTTPWrapper) GetOrganization(organizationName string) (Organizati
 	}
 	organizationURL := strings.ReplaceAll(organizationTemplate, orgPlaceholder, organizationName)
 
-	err = g.get(organizationURL, &organization)
+	_, err = g.get(organizationURL, &organization, map[string]string{})
 
 	return organization, err
 }
@@ -67,7 +67,7 @@ func (g *GitHubHTTPWrapper) GetRepository(organizationName, repositoryName strin
 	repositoryURL = strings.ReplaceAll(repositoryURL, ownerPlaceholder, organizationName)
 	repositoryURL = strings.ReplaceAll(repositoryURL, repoPlaceholder, repositoryName)
 
-	err = g.get(repositoryURL, &repository)
+  _, err = g.get(repositoryURL, &repository, map[string]string{})
 
 	return repository, err
 }
@@ -75,7 +75,7 @@ func (g *GitHubHTTPWrapper) GetRepository(organizationName, repositoryName strin
 func (g *GitHubHTTPWrapper) GetRepositories(organization Organization) ([]Repository, error) {
 	repositoriesURL := organization.RepositoriesURL
 
-	pages, err := getWithPagination(g.client, repositoriesURL, map[string]string{})
+	pages, err := g.getWithPagination(repositoriesURL, map[string]string{})
 	if err != nil {
 		return nil, err
 	}
@@ -98,14 +98,16 @@ func (g *GitHubHTTPWrapper) GetRepositories(organization Organization) ([]Reposi
 }
 
 func (g *GitHubHTTPWrapper) GetCommits(repository Repository, queryParams map[string]string) ([]CommitRoot, error) {
-	commitsURL := repository.CommitsURL
-	index := strings.Index(commitsURL, "{")
+  commitsURL := repository.CommitsURL
+
+  fmt.Println("Calling GetCommits(): " + commitsURL)
+  index := strings.Index(commitsURL, "{")
 	if index < 0 {
 		return nil, errors.Errorf("Unable to collect commits URL for repository %s", repository.FullName)
 	}
 	commitsURL = commitsURL[:index]
 
-	pages, err := getWithPagination(g.client, commitsURL, queryParams)
+	pages, err := g.getWithPagination(commitsURL, queryParams)
 	if err != nil {
 		return nil, err
 	}
@@ -152,7 +154,7 @@ func (g *GitHubHTTPWrapper) getTemplates() error {
 	var rootAPIResponse rootAPI
 
 	baseURL := viper.GetString(params.URLFlag)
-	err = g.get(baseURL, &rootAPIResponse)
+	_, err = g.get(baseURL, &rootAPIResponse, map[string]string{})
 
 	g.organizationTemplate = rootAPIResponse.OrganizationURL
 	g.repositoryTemplate = rootAPIResponse.RepositoryURL
@@ -160,16 +162,7 @@ func (g *GitHubHTTPWrapper) getTemplates() error {
 	return err
 }
 
-func (g *GitHubHTTPWrapper) get(url string, target interface{}) error {
-	resp, err := get(g.client, url, target, map[string]string{})
-	if err != nil {
-		defer resp.Body.Close()
-	}
-	return err
-}
-
-func getWithPagination(
-	client *http.Client,
+func (g *GitHubHTTPWrapper) getWithPagination(
 	url string,
 	queryParams map[string]string,
 ) ([]interface{}, error) {
@@ -177,13 +170,13 @@ func getWithPagination(
 
 	var pageCollection = make([]interface{}, 0)
 
-	next, err := collectPage(client, url, queryParams, &pageCollection)
+	next, err := g.collectPage(g.client, url, queryParams, &pageCollection)
 	if err != nil {
 		return nil, err
 	}
 
 	for next != "" {
-		next, err = collectPage(client, next, map[string]string{}, &pageCollection)
+		next, err = g.collectPage(g.client, next, map[string]string{}, &pageCollection)
 		if err != nil {
 			return nil, err
 		}
@@ -192,7 +185,7 @@ func getWithPagination(
 	return pageCollection, nil
 }
 
-func collectPage(
+func (g *GitHubHTTPWrapper) collectPage(
 	client *http.Client,
 	url string,
 	queryParams map[string]string,
@@ -200,27 +193,24 @@ func collectPage(
 ) (string, error) {
 	var holder = make([]interface{}, 0)
 
-	resp, err := get(client, url, &holder, queryParams)
+	resp, err := g.get(url, &holder, queryParams)
 	if err != nil {
     return "", err
 	}
 
-  defer cleanUpResponse(resp)
-	//defer resp.Body.Close()
-
 	*pageCollection = append(*pageCollection, holder...)
-	next := getNextPageLink(resp)
+	next := g.getNextPageLink(resp)
 
 	return next, nil
 }
 
-func cleanUpResponse(resp *http.Response) {
+func (g *GitHubHTTPWrapper) cleanUpResponse(resp *http.Response) {
   if resp != nil {
     resp.Body.Close()
   }
 }
 
-func getNextPageLink(resp *http.Response) string {
+func (g *GitHubHTTPWrapper) getNextPageLink(resp *http.Response) string {
 	if resp != nil {
 		linkHeader := resp.Header[linkHeaderName]
 		if len(linkHeader) > 0 {
@@ -235,20 +225,32 @@ func getNextPageLink(resp *http.Response) string {
 	return ""
 }
 
-func get(client *http.Client, url string, target interface{}, queryParams map[string]string) (*http.Response, error) {
-	req, err := http.NewRequest(http.MethodGet, url, http.NoBody)
+//
+/// NOTE: (Jeff Armstrong) There was two different get() method. One was a member of the class the other 
+/// the member was a simple wrapper for this call. The Body.Close() would be called too many
+/// times with the original implementation, or called when there was no body. This was triggering
+/// the crash the client was seeing. Now the logic is the same, just with fewer calls. ALL cleanUp 
+/// CODE is now housed within the "defer cleanUpReponse()" in here. This may not be pefect but it 
+/// works better
+//
+/// Finally, I think this method could also be optimized a little bit. Not todays subject 
+//
+func (g *GitHubHTTPWrapper) get(url string, target interface{}, queryParams map[string]string) (*http.Response, error) {
+  req, err := http.NewRequest(http.MethodGet, url, http.NoBody)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Add(acceptHeader, apiVersion)
 	token := viper.GetString(params.SCMTokenFlag)
 	logger.PrintRequest(req)
-	resp, err := GetWithQueryParamsAndCustomRequest(client, req, url, token, tokenFormat, queryParams)
+	resp, err := GetWithQueryParamsAndCustomRequest(g.client, req, url, token, tokenFormat, queryParams)
 	if err != nil {
 		return nil, err
-	}
-	defer resp.Body.Close()
-	logger.PrintResponse(resp, true)
+	} else if resp == nil {
+    return nil, nil
+  }
+	defer g.cleanUpResponse(resp)
+  logger.PrintResponse(resp, true)
 
 	switch resp.StatusCode {
 	case http.StatusOK:
@@ -271,3 +273,4 @@ func get(client *http.Client, url string, target interface{}, queryParams map[st
 	}
 	return resp, nil
 }
+
