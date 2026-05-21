@@ -22,7 +22,7 @@ on:
 
 jobs:
   notify_jira:
-    runs-on: ubuntu-latest
+    runs-on: cx-public-ubuntu-x64
     env:
       JIRA_URL: "https://checkmarx.atlassian.net/"
     steps:
@@ -44,7 +44,7 @@ jobs:
           fields: ${{ secrets.AST_JIRA_FIELDS}}
 
       - name: Add comment to GitHub issue
-        uses: actions/github-script@v4.0.2
+        uses: actions/github-script@a3e7071a34d7e1f219a8a4de9a5e0a34d1ee1293 # v4.0.2
         with:
           script: |
             github.issues.createComment({

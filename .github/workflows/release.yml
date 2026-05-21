@@ -37,11 +37,11 @@ jobs:
       APPLE_DEVELOPER_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_PASSWORD }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 0
       - name: Install Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4 # v4.3.0
         with:
           go-version-file: go.mod
       - name: Import Code-Signing Certificates
@@ -64,7 +64,7 @@ jobs:
           brew install Bearer/tap/gon
       - name: Setup Docker on macOS
         if: inputs.dev == false
-        uses: douglascamata/setup-docker-macos-action@v1-alpha
+        uses: douglascamata/setup-docker-macos-action@f2b307ddc57e8b9d3f9761f3cafa8883b2cdffd4 # v1-alpha.16
       - name: Test docker
         if: inputs.dev == false
         run: |
@@ -116,7 +116,7 @@ jobs:
           SIGNING_HSM_CREDS: ${{ secrets.SIGNING_HSM_CREDS }}
 
   notify:
-    runs-on: ubuntu-latest
+    runs-on: cx-public-ubuntu-x64
     if: inputs.dev == false
     needs: build
     steps:
