@@ -11,7 +11,7 @@ jobs:
     name: Notify Jira
     permissions:
       issues: write # required for the called workflow to add the Jira issue link comment
-    uses: CheckmarxDev/ast-cli/.github/workflows/jira_notify.yml@main
+    uses: CheckmarxDev/ast-cli/.github/workflows/jira_notify.yml@79eed8cf802a4b8a43e5c7c43d000df3b39bd323 # main
     with:
       title: ${{ github.event.issue.title }}
       body: ${{ github.event.issue.body }}

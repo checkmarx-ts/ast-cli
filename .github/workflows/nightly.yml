@@ -25,7 +25,7 @@ jobs:
     permissions:
       contents: write # required by the called release workflow to create tags and releases
       id-token: write # required by the called release workflow to assume the AWS release role
-    uses: Checkmarx/ast-cli/.github/workflows/release.yml@main
+    uses: Checkmarx/ast-cli/.github/workflows/release.yml@79eed8cf802a4b8a43e5c7c43d000df3b39bd323 # main
     with:
       tag: "2.0.0-nightly"
     secrets: inherit
