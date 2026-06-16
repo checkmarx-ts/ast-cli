@@ -7,6 +7,9 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 jobs:
   cx-scan:
     runs-on: cx-public-ubuntu-x64

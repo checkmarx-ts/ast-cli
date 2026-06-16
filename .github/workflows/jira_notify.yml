@@ -20,8 +20,12 @@ on:
         required: true
         type: string
 
+permissions: {}
+
 jobs:
   notify_jira:
+    permissions:
+      issues: write # required to add the created Jira issue link to the GitHub issue
     runs-on: cx-public-ubuntu-x64
     env:
       JIRA_URL: "https://checkmarx.atlassian.net/"

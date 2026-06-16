@@ -3,13 +3,12 @@ on:
   pull_request_target:
     types: [ready_for_review, opened, reopened]
 
-permissions:
-  contents: none
-  issues: write
-  pull-requests: write
+permissions: {}
 
 jobs:
   add-assignee-and-reviewers:
+    permissions:
+      pull-requests: write # required to request team reviewers on incoming pull requests
     runs-on: cx-public-ubuntu-x64
     if: ${{ github.event.pull_request.user.type != 'Bot' }}
     steps:

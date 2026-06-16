@@ -24,12 +24,13 @@ on:
         default: true
         type: boolean
 
-permissions:
-  id-token: write
-  contents: write
+permissions: {}
 
 jobs:
   build:
+    permissions:
+      contents: write # required to create the release tag and publish release artifacts
+      id-token: write # required to assume the AWS release role through OIDC
     runs-on: macos-13
     env:
       AC_PASSWORD: ${{ secrets.AC_PASSWORD }}
@@ -123,6 +124,8 @@ jobs:
           SIGNING_HSM_CREDS: ${{ secrets.SIGNING_HSM_CREDS }}
 
   notify:
+    permissions:
+      contents: read # required to read the latest release notes
     runs-on: cx-public-ubuntu-x64
     if: inputs.dev == false
     needs: build
