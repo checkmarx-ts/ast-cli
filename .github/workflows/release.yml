@@ -40,6 +40,7 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 0
+          persist-credentials: false
       - name: Install Go
         uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4 # v4.3.0
         with:
@@ -83,23 +84,29 @@ jobs:
           aws-region: ${{ secrets.AWS_ASSUME_ROLE_REGION }}
       - name: Tag
         run: |
-          echo ${{ inputs.tag }}
-          echo "NEXT_VERSION=${{ inputs.tag }}" >> $GITHUB_ENV
-          tag=${{ inputs.tag }}
-          message='${{ inputs.tag }}: PR #${{ github.event.pull_request.number }} ${{ github.event.pull_request.title }}'
+          echo ${INPUTS_TAG}
+          echo "NEXT_VERSION=${INPUTS_TAG}" >> $GITHUB_ENV
+          tag=${INPUTS_TAG}
+          message="${INPUTS_TAG}: PR #${GITHUB_EVENT_PULL_REQUEST_NUMBER} ${GITHUB_EVENT_PULL_REQUEST_TITLE}"
           git config user.name "${GITHUB_ACTOR}"
           git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
           git tag -a "${tag}" -m "${message}"
           git push origin "${tag}"
+        env:
+          INPUTS_TAG: ${{ inputs.tag }}
+          GITHUB_EVENT_PULL_REQUEST_TITLE: ${{ github.event.pull_request.title }}
+          GITHUB_EVENT_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
       - name: Build GoReleaser Args
         run: |
           args='release --clean --debug'
-          if [ ${{ inputs.dev }} = true ]; then
+          if [ ${INPUTS_DEV} = true ]; then
             args=${args}' --config=".goreleaser-dev.yml"'
           fi
           echo "GR_ARGS=${args}" >> $GITHUB_ENV
+        env:
+          INPUTS_DEV: ${{ inputs.dev }}
       - name: Echo GoReleaser Args
-        run: echo ${{ env.GR_ARGS }}
+        run: echo ${GR_ARGS}
       - name: Run GoReleaser
         uses: step-security/goreleaser-action@1472c46ac6e641f2b929f1a893354288b3a6b6b6 # v7.2.1
         with:
@@ -138,9 +145,11 @@ jobs:
       - name: Clean html
         id: clean
         run: |
-          clean="$(echo "${{ steps.convert.outputs.html }}" | awk '{gsub(/id=.[a-z]+/,"");print}' | tr -d '\n')"
+          clean="$(echo "${STEPS_CONVERT_OUTPUTS_HTML}" | awk '{gsub(/id=.[a-z]+/,"");print}' | tr -d '\n')"
           echo "$clean"
           echo "::set-output name=clean::$clean"
+        env:
+          STEPS_CONVERT_OUTPUTS_HTML: ${{ steps.convert.outputs.html }}
 
       - name: Send a Notification
         id: notify

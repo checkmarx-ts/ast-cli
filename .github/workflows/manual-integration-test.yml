@@ -53,6 +53,8 @@ jobs:
           echo PROXY_PASSWORD="$INP_PROXY_PASSWORD" >> $GITHUB_ENV
       - name: Checkout
         uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f # v2.3.4
+        with:
+          persist-credentials: false
       - name: Install Go
         uses: actions/setup-go@bfdd3570ce990073878bf10f6b2d79082de49492 # v2.2.0
         with:
